@@ -1,6 +1,10 @@
 defmodule SearWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :sear
 
+  socket "/socket", SearWeb.UserSocket,
+    websocket: true,
+    longpoll: false
+
   # Serve at "/" the static files from "priv/static" directory.
   #
   # You should set gzip to true if you are running phx.digest
