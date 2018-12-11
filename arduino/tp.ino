@@ -200,7 +200,7 @@ void test_mode() {
   long time_running = 0;
   while (time_running <= 10 * 1000) {
     long start_time = millis();
-    make_request("/ping");
+    make_request("/api/ping");
     long end_time = millis();
     Serial.print("Ping: ");
     Serial.print(end_time - start_time);
@@ -247,7 +247,7 @@ void maint_mode() {
 }
 
 void normal_mode() {
-  String command = make_request("/command?x=" + String(shaftPositionX) + "&y=" + String(shaftPositionY));
+  String command = make_request("/api/command?x=" + String(shaftPositionX) + "&y=" + String(shaftPositionY));
 
   move_from_response(command);
 
@@ -268,7 +268,7 @@ void snap_photo(){
   handlePhotoRequest();
   */
   String filename = String(shaftPositionX) + "_" + String(shaftPositionY) + ".jpg";
-  notify_new_photo("/photo", filename);
+  notify_new_photo("/api/photo", filename);
 }
 
 char get_char_code_from(String response) {
@@ -485,11 +485,12 @@ void handlePhotoRequest(){
 }
 
 void notify_new_photo(String endpoint, String file_name){
-
+  Serial.println("Notificando nueva foto");
   String data = "filename=" + file_name;
 
   while (!client.connected()) {
     if (client.connect(serverAddress, PORT)) {
+      Serial.println("Enviando nueva foto");
       client.println("PUT " + endpoint + " HTTP/1.1");
       client.println("Host: " + String(SERVER[0]) + "." + String(SERVER[1]) + "."  + String(SERVER[2]) + "." + String(SERVER[3]));
       client.println("User-Agent: Arduino/1.0"); 
@@ -507,6 +508,7 @@ void notify_new_photo(String endpoint, String file_name){
   while (!client.available()) {}
 
   while (client.available()) {client.read();}
+  Serial.println("Foto enviada");
   
   delay(10);
   client.stop();
