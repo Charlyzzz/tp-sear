@@ -93,10 +93,11 @@ byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xE1 };
 // use the numeric IP instead of the name for the server:
 
 byte SERVER[] = {10, 0, 1, 5};
-IPAddress server(SERVER[0], SERVER[1], SERVER[2], SERVER[3]);
+IPAddress serverAddress(SERVER[0], SERVER[1], SERVER[2], SERVER[3]);
 
 
 EthernetClient client;
+EthernetServer server = EthernetServer(80);
 
 const int PORT = 4000;
 
@@ -171,12 +172,9 @@ void setupEthernet() {
   Serial.println("Ethernet started");
 }
 
-EthernetServer server2 = EthernetServer(80);
-
-
 void setupEthernetServer() {
   Serial.println("Setup Ethernet server");
-  server2.begin();
+  server.begin();
   Serial.println("Ethernet server started");
 }
 
@@ -187,54 +185,12 @@ void setupEthernetServer() {
 int loopCount = 0;
 
 void loop() {
-  EthernetClient client2 = server2.available();
-  if (client2) {
-    Serial.println("new client");
-    // an http request ends with a blank line
-    bool currentLineIsBlank = true;
-    while (client2.connected()) {
-      if (client2.available()) {
-        char c = client2.read();
-        Serial.write(c);
-        // if you've gotten to the end of the line (received a newline
-        // character) and the line is blank, the http request has ended,
-        // so you can send a reply
-        if (c == '\n' && currentLineIsBlank) {
-          // send a standard http response header
-          client2.println("HTTP/1.1 200 OK");
-          client2.println("Content-Type: text/html");
-          client2.println("Connection: close");  // the connection will be closed after completion of the response
-          client2.println("Refresh: 5");  // refresh the page automatically every 5 sec
-          client2.println();
-          client2.println("<!DOCTYPE HTML>");
-          client2.println("<html>");
-          // output the value of each analog input pin
-          client2.println("</html>");
-          break;
-        }
-        if (c == '\n') {
-          // you're starting a new line
-          currentLineIsBlank = true;
-        } else if (c != '\r') {
-          // you've gotten a character on the current line
-          currentLineIsBlank = false;
-        }
-      }
-    }
-    // give the web browser time to receive the data
-    delay(1);
-    // close the connection:
-    client2.stop();
-    Serial.println("client disconnected");
-  }
+  
+  if (MODE == 0) MODE = print_set_mode();
 
-  /*
-    if (MODE == 0) MODE = print_set_mode();
-
-    if (MODE == TEST_MODE) test_mode();
-    if (MODE == MAINT_MODE) maint_mode();
-    if (MODE == NORMAL_MODE) normal_mode();*/
-
+  if (MODE == TEST_MODE) test_mode();
+  if (MODE == MAINT_MODE) maint_mode();
+  if (MODE == NORMAL_MODE) normal_mode();
 }
 
 void test_mode() {
@@ -294,9 +250,25 @@ void normal_mode() {
   String command = make_request("/command?x=" + String(shaftPositionX) + "&y=" + String(shaftPositionY));
 
   move_from_response(command);
-  if (command == RESPONSE_NOP) {
-    delay(2000);
+
+  if (command == RESPONSE_SNAP) {
+    snap_photo();
   }
+
+  if (command == RESPONSE_NOP) {
+    Serial.println("Aletargando frecuencia de polling");
+    delay(3000);
+  }
+}
+
+void snap_photo(){
+  Serial.println("Sacando foto");
+  /*
+  make_request("/photo");
+  handlePhotoRequest();
+  */
+  String filename = String(shaftPositionX) + "_" + String(shaftPositionY) + ".jpg";
+  notify_new_photo("/photo", filename);
 }
 
 char get_char_code_from(String response) {
@@ -390,7 +362,6 @@ void move_from_response(String command) {
 
 }
 
-
 void move_shaft() {
   int turnNo;
   if ((turnRight && shaftPositionX <= 7) || (shaftPositionX > 0 && turnLeft) || (turnUp && shaftPositionY <= 7) || (shaftPositionY > 0 && turnDown)) {
@@ -433,7 +404,6 @@ void move_motor() {
   motorStepY = ( motorStepY + 4 ) % 4 ;
 }
 
-
 String make_request(String endpoint) {
 
   boolean nextIsResponse = false;
@@ -446,7 +416,7 @@ String make_request(String endpoint) {
     if (elapsed_time >= 1 * 1000) {
       time = millis();
       while (!client.connected()) {
-        if (client.connect(server, PORT)) {
+        if (client.connect(serverAddress, PORT)) {
           Serial.println("Making request");
           client.println("GET " + endpoint + " HTTP/1.1");
           client.println("Host: " + String(SERVER[0]) + "." + String(SERVER[1]) + "."  + String(SERVER[2]) + "." + String(SERVER[3]));
@@ -471,5 +441,73 @@ String make_request(String endpoint) {
       return response;
     }
   }
+}
 
+void handlePhotoRequest(){
+  EthernetClient clientConnection = server.available();
+  while(!clientConnection) {
+    Serial.println("Esperando conexion entrante");
+    delay(2000);
+    clientConnection = server.available();
+  }
+  
+  Serial.println("Conexión detectada");
+  Serial.println("Recibiendo request");
+  int newLineCount = 0;
+  boolean termino_request;
+  while (clientConnection.connected()) {
+    if (clientConnection.available()) {
+      char c = clientConnection.read();
+
+      if (c == '\n') {
+        newLineCount++;
+      } else if (c != '\r') {
+        newLineCount = 0;
+      }
+      
+      termino_request = newLineCount == 2;
+      if (termino_request) {
+        Serial.println("Request recibida. Enviando foto");
+
+        clientConnection.println("HTTP/1.1 200 OK");
+        clientConnection.println("Content-Type: text/plain");
+        clientConnection.println("Connection: close");  // the connection will be closed after completion of the response
+        clientConnection.println();
+        clientConnection.println("Foo");
+        break;
+      }
+    }
+  }
+  Serial.println("Foto enviada");
+  delay(10);
+  clientConnection.stop();
+  Serial.println("Conexión cerrada");
+}
+
+void notify_new_photo(String endpoint, String file_name){
+
+  String data = "filename=" + file_name;
+
+  while (!client.connected()) {
+    if (client.connect(serverAddress, PORT)) {
+      client.println("PUT " + endpoint + " HTTP/1.1");
+      client.println("Host: " + String(SERVER[0]) + "." + String(SERVER[1]) + "."  + String(SERVER[2]) + "." + String(SERVER[3]));
+      client.println("User-Agent: Arduino/1.0"); 
+      client.println("Connection: close");
+      client.println("Content-Type: application/x-www-form-urlencoded");  
+      client.print("Content-Length: "); 
+      client.println(data.length());
+      client.println();
+      client.println(data);    
+    } else {
+      Serial.println("Error making the request");
+    }
+  }
+
+  while (!client.available()) {}
+
+  while (client.available()) {client.read();}
+  
+  delay(10);
+  client.stop();
 }
