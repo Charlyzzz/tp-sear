@@ -10,6 +10,7 @@ defmodule SearWeb.Router do
 
     get "/command", CameraController, :command
     get "/ping", CameraController, :ping
+    post "/photo", CameraController, :request_photo
   end
 
   # Other scopes may use custom stacks.

@@ -10,6 +10,11 @@ defmodule SearWeb.CameraController do
     send_resp(conn, :ok, movement)
   end
 
+  def request_photo(conn, %{"x" => x, "y" => y}) do
+    Commander.snap_photo({x, y})
+    send_resp(conn, :created, "")
+  end
+
   def ping(conn, _params) do
     send_resp(conn, :ok, "pong")
   end
