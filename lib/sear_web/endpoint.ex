@@ -42,5 +42,7 @@ defmodule SearWeb.Endpoint do
     key: "_sear_key",
     signing_salt: "SBYGmsdo"
 
+  plug Corsica, origins: "*", allow_headers: :all
+
   plug SearWeb.Router
 end
