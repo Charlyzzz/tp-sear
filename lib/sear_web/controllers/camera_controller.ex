@@ -16,9 +16,10 @@ defmodule SearWeb.CameraController do
     send_resp(conn, :created, "")
   end
 
-  def photo_snapped(conn, %{"filename" => new_photo}) do
+  def photo_snapped(conn, %{"filename" => filename}) do
+    new_photo = Photos.new(filename)
     Photos.store(new_photo)
-    Endpoint.broadcast!("photos", "new_photo", %{filename: new_photo})
+    Endpoint.broadcast!("photos", "new_photo", new_photo)
     send_resp(conn, :ok, "")
   end
 
