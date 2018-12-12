@@ -5,7 +5,10 @@ defmodule Sear.Application do
 
   use Application
 
+  alias Sear.Photos
+
   def start(_type, _args) do
+    Photos.init
     # List all child processes to be supervised
     children = [
       # Start the endpoint when the application starts

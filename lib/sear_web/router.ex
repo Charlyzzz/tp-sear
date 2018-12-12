@@ -23,9 +23,10 @@ defmodule SearWeb.Router do
     pipe_through :api
 
     get "/command", CameraController, :command
-    post "/photo", CameraController, :request_photo
     put "/photo", CameraController, :photo_snapped
-
+    post "/photo", CameraController, :request_photo
+    get "/photos", CameraController, :all_photos
+    
     get "/ping", CameraController, :ping
   end
 end

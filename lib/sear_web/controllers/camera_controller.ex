@@ -1,7 +1,7 @@
 defmodule SearWeb.CameraController do
   use SearWeb, :controller
 
-  alias Sear.Commander
+  alias Sear.{Commander, Photos}
   alias SearWeb.Endpoint
 
   def command(conn, _params) do
@@ -17,9 +17,15 @@ defmodule SearWeb.CameraController do
   end
 
   def photo_snapped(conn, %{"filename" => new_photo}) do
+    Photos.store(new_photo)
     Endpoint.broadcast!("photos", "new_photo", %{filename: new_photo})
     send_resp(conn, :ok, "")
   end
+
+  def all_photos(conn, _) do
+    json(conn, %{ photos: Photos.all() })
+  end
+
 
   def ping(conn, _params) do
     send_resp(conn, :ok, "pong")
