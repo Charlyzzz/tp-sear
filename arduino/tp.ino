@@ -21,7 +21,8 @@ int const STEP [ MOTOR_STEPS ][ MOTOR_POLES ] = {
   {1, 0, 0, 1}
 };
 
-int const GEAR_RATIO = 64;
+// Sensibilidad de giro
+int const GEAR_RATIO = 16;
 int const SHAFT_STEPS = 8;
 
 int const SHAFT_MOTOR_STEPS_RATIO = GEAR_RATIO * MOTOR_STEPS;
@@ -185,7 +186,7 @@ void setupEthernet() {
   Ethernet.begin(mac);
   Serial.print("Conectado a la red. La IP asignada es ");
   Serial.println(Ethernet.localIP());
-  delay(1000);
+  delay(100);
   Serial.println("Ethernet configurado");
 }
 
@@ -206,6 +207,8 @@ void loop() {
 
 void test_mode() {
   Serial.println("Iniciando pruebas del modo test");
+  lcd.clear();
+  lcd.print("Test Ping");
   Serial.println("Prueba de ping");
   long test_started_time = millis();
   long time_running = 0;
@@ -226,26 +229,47 @@ void test_mode() {
   }
   int turnNo;
 
+  lcd.setCursor(5, 0);
+  lcd.print("Movimiento");
+  
   lcd.setCursor(0, 1);
-  lcd.print("                ");
-  lcd.setCursor(0, 1);
-
+  lcd.print("Eje x  ");
   Serial.println("Prueba de motor eje X");
-  for (turnNo = 0; turnNo < SHAFT_STEPS; turnNo++) {
+
+  print_shafts_position_in_lcd();
+  for (turnNo = INITIAL_SHAFT_POSITION_X; turnNo < SHAFT_STEPS; turnNo++) {
     move_from_command(KEY_RIGHT);
+    print_shafts_position_in_lcd();
   }
 
-  for (turnNo = 0; turnNo < SHAFT_STEPS; turnNo++) {
+  for (turnNo; turnNo > 0; turnNo--) {
     move_from_command(KEY_LEFT);
+    print_shafts_position_in_lcd();
   }
 
+  for (turnNo; turnNo < SHAFT_STEPS/2; turnNo++) {
+    move_from_command(KEY_RIGHT);
+    print_shafts_position_in_lcd();
+  }
+
+  lcd.setCursor(0, 1);
+  lcd.print("Eje y  ");
   Serial.println("Prueba de motor eje Y");
-  for (turnNo = 0; turnNo < SHAFT_STEPS; turnNo++) {
+
+  print_shafts_position_in_lcd();
+  for (turnNo = INITIAL_SHAFT_POSITION_Y; turnNo < SHAFT_STEPS; turnNo++) {
     move_from_command(KEY_UP);
+    print_shafts_position_in_lcd();
   }
 
-  for (turnNo = 0; turnNo < SHAFT_STEPS; turnNo++) {
+  for (turnNo; turnNo > 0; turnNo--) {
     move_from_command(KEY_DOWN);
+    print_shafts_position_in_lcd();
+  }
+
+  for (turnNo; turnNo < SHAFT_STEPS/2; turnNo++) {
+    move_from_command(KEY_UP);
+    print_shafts_position_in_lcd();
   }
 
   Serial.println("Fin pruebas del motor");
@@ -261,6 +285,7 @@ void calibration_mode() {
     if(key == CONFIRMAR_KEY) {
       MODE = SELECT_MODE;
       set_shafts_offset();
+      Serial.println("Confirmando nuevo offset para los servos");
       break;
     } else {
       move_from_command(key); 
@@ -274,17 +299,26 @@ void set_shafts_offset(){
 }
 
 void normal_mode() {
-  String command = make_request("/api/command?x=" + String(shaftPositionX) + "&y=" + String(shaftPositionY));
+  lcd.clear();
+  lcd.print("Operativo!");
+  print_shafts_position_in_lcd();
+  for(;;) {
+    String command = make_request("/api/command?x=" + String(shaftPositionX) + "&y=" + String(shaftPositionY));
+    
+    lcd.setCursor(0, 1);
 
-  move_from_response(command);
-
-  if (command == RESPONSE_SNAP) {
-    snap_photo();
-  }
-
-  if (command == RESPONSE_NOP) {
-    Serial.println("Aletargando frecuencia de polling");
-    delay(3000);
+    if (command == RESPONSE_SNAP) {      
+      lcd.print("Mandar ");
+      snap_photo();
+    } else if (command == RESPONSE_NOP) {
+      Serial.println("Aletargando frecuencia de polling");
+      lcd.print("Espera ");
+      delay(3000);
+    } else {
+      lcd.print("Mover  ");
+      move_from_response(command);
+      print_shafts_position_in_lcd();
+    }
   }
 }
 
@@ -292,6 +326,7 @@ void snap_photo(){
   Serial.println("Sacando foto");
   String filename = String(shaftPositionX) + "_" + String(shaftPositionY) + ".jpg";
   notify_new_photo("/api/photo", filename);
+  delay(2000);
 }
 
 char get_char_code_from(String response) {
@@ -330,13 +365,13 @@ int print_set_mode() {
     key = wait_for_key();
   } while (key != TEST_KEY && key != CALIBRATION_KEY && key != NORMAL_KEY);
 
-  if (key == '#') {
+  if (key == TEST_KEY) {
     return TEST_MODE;
   }
-  if (key == '0') {
+  if (key == CALIBRATION_KEY) {
     return CALIBRATION_MODE;
   }
-  if (key == '*') {
+  if (key == NORMAL_KEY) {
     return NORMAL_MODE;
   }
 }
@@ -402,6 +437,7 @@ void move_shaft() {
     } else if (turnDown) {
       shaftPositionY--;
     }
+    delay(150);
   }
 }
 
@@ -441,13 +477,13 @@ String make_request(String endpoint) {
       time = millis();
       while (!client.connected()) {
         if (client.connect(serverAddress, PORT)) {
-          Serial.println("Making request");
+          Serial.println("Haciendo request a " + endpoint);
           client.println("GET " + endpoint + " HTTP/1.1");
           client.println("Host: " + String(SERVER[0]) + "." + String(SERVER[1]) + "."  + String(SERVER[2]) + "." + String(SERVER[3]));
           client.println("Connection:close");
           client.println();
         } else {
-          Serial.println("Error making the request");
+          Serial.println("Fallo la request");
         }
       }
 
