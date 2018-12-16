@@ -1,12 +1,15 @@
-#include <SPI.h>
-#include <Keypad.h>
-#include <Ethernet.h>
 #include <LiquidCrystal.h>
+
+#include <Key.h>
+#include <Keypad.h>
+
+#include <Ethernet.h>
+
 
 
 // ==========================
 // == MOTOR CONFIG
-// ==========================
+// ==========================s
 
 int const MOTOR_POLES = 4;
 int const MOTOR_STEPS = 4;
@@ -24,8 +27,11 @@ int const SHAFT_STEPS = 8;
 int const SHAFT_MOTOR_STEPS_RATIO = GEAR_RATIO * MOTOR_STEPS;
 int const MOTOR_TURN_DELAY = 1;
 
+int const INITIAL_SHAFT_POSITION_X = 4;
+int const INITIAL_SHAFT_POSITION_Y = 4;
+
 boolean turnRight, turnLeft;
-int shaftPositionX = 0;
+int shaftPositionX = INITIAL_SHAFT_POSITION_X;
 int motorStepX = 0;
 
 const int m1 = 53;
@@ -34,7 +40,7 @@ const int m3 = 49;
 const int m4 = 47;
 
 boolean turnUp, turnDown;
-int shaftPositionY = 0;
+int shaftPositionY = INITIAL_SHAFT_POSITION_Y;
 int motorStepY = 0;
 
 const int w1 = 23;
@@ -71,6 +77,13 @@ const char KEY_RIGHT = '4';
 // == LCD CONFIG
 // ==========================
 
+
+//LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
+LiquidCrystal lcd(A11, A10, A15, A14, A13, A12);
+
+//LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
+
+/*
 const int D4 = A13;
 const int D5 = A12;
 const int D6 = A11;
@@ -80,7 +93,7 @@ const int RS = A9;
 const int EN = A8;
 
 LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
-
+*/
 
 // ==========================
 // == ETHERNET CONFIG
@@ -97,7 +110,6 @@ IPAddress serverAddress(SERVER[0], SERVER[1], SERVER[2], SERVER[3]);
 
 
 EthernetClient client;
-EthernetServer server = EthernetServer(80);
 
 const int PORT = 4000;
 
@@ -116,8 +128,14 @@ String RESPONSE_SNAP = "@snap";
 long time = 0;
 
 const int TEST_MODE = 1;
-const int MAINT_MODE = 2;
+const int CALIBRATION_MODE = 2;
 const int NORMAL_MODE = 4;
+
+const char TEST_KEY = '7';
+const char CALIBRATION_KEY = '0';
+const char NORMAL_KEY = '*';
+const char CONFIRMAR_KEY = '5';
+
 
 const int SELECT_MODE = 0;
 
@@ -134,13 +152,12 @@ void setup() {
   setupLCD();
   setupMotor();
   setupEthernet();
-  setupEthernetServer();
 }
 
 void setupSerial() {
   Serial.begin(9600);
   while (!Serial) {}
-  Serial.println("...Starting...");
+  Serial.println("...Iniciando...");
 }
 
 void setupMotor() {
@@ -152,30 +169,24 @@ void setupMotor() {
   pinMode(w2, OUTPUT);
   pinMode(w3, OUTPUT);
   pinMode(w4, OUTPUT);
-  Serial.println("Motor Configured");
+  Serial.println("Motor configurado");
 }
 
 void setupLCD() {
-  Serial.println("Setup LCD");
   lcd.begin(16, 2);
-  lcd.setCursor(0, 0);
-  lcd.print("Hello Moto!");
-  Serial.println("LCD Started");
+  lcd.print("Bienvenidos");
+  lcd.setCursor(0, 1);
+  lcd.print("Configurando...");
+  Serial.println("LCD configurado");
 }
 
 void setupEthernet() {
-  Serial.println("Setup Ethernet");
+  Serial.println("Configurando Ethernet");
   Ethernet.begin(mac);
-  Serial.print("Connected to network. Assigned IP: ");
+  Serial.print("Conectado a la red. La IP asignada es ");
   Serial.println(Ethernet.localIP());
   delay(1000);
-  Serial.println("Ethernet started");
-}
-
-void setupEthernetServer() {
-  Serial.println("Setup Ethernet server");
-  server.begin();
-  Serial.println("Ethernet server started");
+  Serial.println("Ethernet configurado");
 }
 
 // ==========================
@@ -189,7 +200,7 @@ void loop() {
   if (MODE == 0) MODE = print_set_mode();
 
   if (MODE == TEST_MODE) test_mode();
-  if (MODE == MAINT_MODE) maint_mode();
+  if (MODE == CALIBRATION_MODE) calibration_mode();
   if (MODE == NORMAL_MODE) normal_mode();
 }
 
@@ -241,9 +252,25 @@ void test_mode() {
   MODE = SELECT_MODE;
 }
 
-void maint_mode() {
-  char key = keypad.getKey();
-  move_from_command(key);
+void calibration_mode() {
+  lcd.clear();
+  lcd.print("Modo calibracion");
+  for(;;){
+    print_shafts_position_in_lcd();
+    char key = wait_for_key();
+    if(key == CONFIRMAR_KEY) {
+      MODE = SELECT_MODE;
+      set_shafts_offset();
+      break;
+    } else {
+      move_from_command(key); 
+    }
+  }
+}
+
+void set_shafts_offset(){
+  shaftPositionX = INITIAL_SHAFT_POSITION_X;
+  shaftPositionY = INITIAL_SHAFT_POSITION_Y;
 }
 
 void normal_mode() {
@@ -263,10 +290,6 @@ void normal_mode() {
 
 void snap_photo(){
   Serial.println("Sacando foto");
-  /*
-  make_request("/photo");
-  handlePhotoRequest();
-  */
   String filename = String(shaftPositionX) + "_" + String(shaftPositionY) + ".jpg";
   notify_new_photo("/api/photo", filename);
 }
@@ -295,33 +318,35 @@ void print_shafts_position_in_lcd() {
 }
 
 int print_set_mode() {
-
+  Serial.println("Esperando seleccion de modo");
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("Ingrese modo");
-  Serial.println("Ingrese modo");
+  lcd.setCursor(0, 1);
+  lcd.print(String(TEST_KEY) + "=T " + String(CALIBRATION_KEY) + "=C " + String(NORMAL_KEY) + "=N");
+  
   char key;
   do {
-    key = keypad.getKey();
-  } while (key != '#' && key != '0' && key != '*');
-
-  Serial.print("Presionaron: ");
-  Serial.println(key);
-  lcd.clear();
-  lcd.setCursor(0, 0);
+    key = wait_for_key();
+  } while (key != TEST_KEY && key != CALIBRATION_KEY && key != NORMAL_KEY);
 
   if (key == '#') {
-    lcd.print("Test");
     return TEST_MODE;
   }
   if (key == '0') {
-    lcd.print("Maint");
-    return MAINT_MODE;
+    return CALIBRATION_MODE;
   }
   if (key == '*') {
-    lcd.print("Normal");
     return NORMAL_MODE;
   }
+}
+
+char wait_for_key(){
+  char pressed_key;
+  do {
+    pressed_key = keypad.getKey();
+  } while (pressed_key == NO_KEY);
+  return pressed_key;
 }
 
 void lcd_print_if(char key, char expected, String message) {
@@ -342,7 +367,6 @@ void move_from_command(char key) {
 
   if (turnLeft || turnRight || turnDown || turnUp) {
     move_shaft();
-    print_shafts_position_in_lcd();
   }
 
 }
@@ -441,47 +465,6 @@ String make_request(String endpoint) {
       return response;
     }
   }
-}
-
-void handlePhotoRequest(){
-  EthernetClient clientConnection = server.available();
-  while(!clientConnection) {
-    Serial.println("Esperando conexion entrante");
-    delay(2000);
-    clientConnection = server.available();
-  }
-  
-  Serial.println("Conexión detectada");
-  Serial.println("Recibiendo request");
-  int newLineCount = 0;
-  boolean termino_request;
-  while (clientConnection.connected()) {
-    if (clientConnection.available()) {
-      char c = clientConnection.read();
-
-      if (c == '\n') {
-        newLineCount++;
-      } else if (c != '\r') {
-        newLineCount = 0;
-      }
-      
-      termino_request = newLineCount == 2;
-      if (termino_request) {
-        Serial.println("Request recibida. Enviando foto");
-
-        clientConnection.println("HTTP/1.1 200 OK");
-        clientConnection.println("Content-Type: text/plain");
-        clientConnection.println("Connection: close");  // the connection will be closed after completion of the response
-        clientConnection.println();
-        clientConnection.println("Foo");
-        break;
-      }
-    }
-  }
-  Serial.println("Foto enviada");
-  delay(10);
-  clientConnection.stop();
-  Serial.println("Conexión cerrada");
 }
 
 void notify_new_photo(String endpoint, String file_name){
