@@ -13,7 +13,7 @@ defmodule Sear.Application do
     children = [
       # Start the endpoint when the application starts
       SearWeb.Endpoint,
-      Sear.Commander
+      Sear.Commander.child_spec([], name: Sear.Commander)
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

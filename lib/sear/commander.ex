@@ -1,44 +1,62 @@
 defmodule Sear.Commander do
   use GenServer
 
-  alias Sear.Location
+  alias Sear.Commander
 
-  def start_link(_) do
-    GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
+  def start_link(estado, opts \\ []) do
+    GenServer.start_link(__MODULE__, estado, opts)
   end
 
-  def start_link, do: GenServer.start_link(__MODULE__, :ok)
+  def child_spec(estado, opts) do
+    %{
+      id: Commander,
+      start: {Commander, :start_link, [estado, opts]}
+    }
+  end
+
+  #CALLBACKS
 
   @impl true
-  def init(_) do
-    {:ok, {{4,4}, true}}
+  def init(estado) do
+    {:ok, estado}
   end
 
   @impl true
-  def handle_call({:snap, new_photo_location}, _from, _old_photo_location) do
-    {:reply, 0, {new_photo_location, false}}
+  def handle_cast({:push, new_photo_location}, photos) do
+    {:noreply, photos ++ [new_photo_location]}
   end  
 
   @impl true
-  def handle_call({:next_movement, location}, _from, {location, false}) do
-    {:reply, "@snap", {location, true}}
+  def handle_cast(:pop, [_ | rest]) do
+    {:noreply, rest}
   end  
 
   @impl true
-  def handle_call({:next_movement, camera_location}, _from, {photo_location, false} = state) do
-    {:reply, Location.move_closer(photo_location, camera_location), state}
+  def handle_cast(:pop, [] = state) do
+    {:noreply, state}
+  end   
+
+  @impl true
+  def handle_call(:peek, _from, [next_photo | _] = fotos) do
+    {:reply, next_photo, fotos}
   end  
 
   @impl true
-  def handle_call({:next_movement, _}, _from, {_, true} = state) do
-    {:reply, Location.nop, state}
+  def handle_call(:peek, _from, [] = state) do
+    {:reply, "nop", state}
   end  
 
-  def snap_photo(position) do
-    GenServer.call(__MODULE__, {:snap, position})
+  #API
+
+  def push(commander, foto) do
+    GenServer.cast(commander, {:push, foto})
   end
 
-  def next_movement(current_position) do
-    GenServer.call(__MODULE__, {:next_movement, current_position})
+  def pop(commander) do
+    GenServer.cast(commander, :pop)
+  end
+
+  def peek(commander) do
+    GenServer.call(commander, :peek)
   end
 end

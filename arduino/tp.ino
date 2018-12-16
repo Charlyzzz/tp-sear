@@ -114,12 +114,7 @@ EthernetClient client;
 
 const int PORT = 4000;
 
-String RESPONSE_UP    = "@up";
-String RESPONSE_DOWN  = "@down";
-String RESPONSE_LEFT  = "@left";
-String RESPONSE_RIGHT = "@right";
 String RESPONSE_NOP = "@nop";
-String RESPONSE_SNAP = "@snap";
 
 
 // ==========================
@@ -304,38 +299,55 @@ void normal_mode() {
   lcd.print("Operativo!");
   print_shafts_position_in_lcd();
   for(;;) {
-    String command = make_request("/api/command?x=" + String(shaftPositionX) + "&y=" + String(shaftPositionY));
+    String command = make_request("/api/command");
     
     lcd.setCursor(0, 1);
 
-    if (command == RESPONSE_SNAP) {      
-      lcd.print("Mandar ");
-      snap_photo();
-    } else if (command == RESPONSE_NOP) {
+   if (command == RESPONSE_NOP) {
       Serial.println("Aletargando frecuencia de polling");
       lcd.print("Espera ");
       delay(3000);
     } else {
+      int x = String(command[1]).toInt(); 
+      int y = String(command[2]).toInt(); 
       lcd.print("Mover  ");
-      move_from_response(command);
+      mover_a(x, y);
+      snap_photo();
+    }
+  }
+}
+
+void mover_a(int x, int y) { 
+  Serial.println("Moviendo a x=" + String(x) + " y=" + String(y));
+  Serial.println("Desde a x=" + String(shaftPositionX) + " y=" + String(shaftPositionY));
+
+
+  while(x != shaftPositionX || y != shaftPositionY) {
+    if (x > shaftPositionX) {
+      move_from_command(KEY_RIGHT);
+      print_shafts_position_in_lcd();
+    } else if (x < shaftPositionX) {
+      move_from_command(KEY_LEFT);
+      print_shafts_position_in_lcd();
+    }
+
+    if (y > shaftPositionY) {
+      move_from_command(KEY_UP);
+      print_shafts_position_in_lcd();
+    } else if (y < shaftPositionY) {
+      move_from_command(KEY_DOWN);
       print_shafts_position_in_lcd();
     }
   }
 }
 
 void snap_photo(){
+  lcd.setCursor(0, 1);
+  lcd.print("Mandar ");
   Serial.println("Sacando foto");
   String filename = String(shaftPositionX) + "_" + String(shaftPositionY) + ".jpg";
   notify_new_photo("/api/photo", filename);
   delay(2000);
-}
-
-char get_char_code_from(String response) {
-  if (response == RESPONSE_UP)    return KEY_UP;
-  if (response == RESPONSE_DOWN)  return KEY_DOWN;
-  if (response == RESPONSE_LEFT)  return KEY_LEFT;
-  if (response == RESPONSE_RIGHT) return KEY_RIGHT;
-  return '.';
 }
 
 void print_shafts_position_in_lcd() {
@@ -400,20 +412,6 @@ void move_from_command(char key) {
   turnDown  = key == KEY_DOWN;
   turnLeft  = key == KEY_LEFT;
   turnRight = key == KEY_RIGHT;
-
-  if (turnLeft || turnRight || turnDown || turnUp) {
-    move_shaft();
-  }
-
-}
-
-void move_from_response(String command) {
-  Serial.println("Aplicando: " + command);
-
-  turnUp    = command == RESPONSE_UP;
-  turnDown  = command == RESPONSE_DOWN;
-  turnLeft  = command == RESPONSE_LEFT;
-  turnRight = command == RESPONSE_RIGHT;
 
   if (turnLeft || turnRight || turnDown || turnUp) {
     move_shaft();
