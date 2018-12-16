@@ -11,7 +11,7 @@ defmodule Sear.Commander do
 
   @impl true
   def init(_) do
-    {:ok, {{0,0}, true}}
+    {:ok, {{4,4}, true}}
   end
 
   @impl true
