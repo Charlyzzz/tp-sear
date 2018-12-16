@@ -272,6 +272,7 @@ void test_mode() {
     print_shafts_position_in_lcd();
   }
 
+  delay(2000);
   Serial.println("Fin pruebas del motor");
   MODE = SELECT_MODE;
 }
@@ -416,7 +417,6 @@ void move_from_response(String command) {
 
   if (turnLeft || turnRight || turnDown || turnUp) {
     move_shaft();
-    print_shafts_position_in_lcd();
   }
 
 }
@@ -437,7 +437,6 @@ void move_shaft() {
     } else if (turnDown) {
       shaftPositionY--;
     }
-    delay(150);
   }
 }
 

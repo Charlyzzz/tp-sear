@@ -25,8 +25,13 @@ defmodule Sear.Commander do
   end  
 
   @impl true
-  def handle_call({:next_movement, camera_location}, _from, {photo_location, _} = state) do
+  def handle_call({:next_movement, camera_location}, _from, {photo_location, false} = state) do
     {:reply, Location.move_closer(photo_location, camera_location), state}
+  end  
+
+  @impl true
+  def handle_call({:next_movement, _}, _from, {_, true} = state) do
+    {:reply, Location.nop, state}
   end  
 
   def snap_photo(position) do
