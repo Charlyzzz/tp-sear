@@ -221,6 +221,7 @@ void test_mode() {
     lcd.print(end_time - start_time);
     lcd.print("ms");
     time_running = millis() - test_started_time;
+    delay(1000);
   }
   int turnNo;
 
@@ -235,16 +236,19 @@ void test_mode() {
   for (turnNo = INITIAL_SHAFT_POSITION_X; turnNo < SHAFT_STEPS; turnNo++) {
     move_from_command(KEY_RIGHT);
     print_shafts_position_in_lcd();
+    delay(500);
   }
 
   for (turnNo; turnNo > 0; turnNo--) {
     move_from_command(KEY_LEFT);
     print_shafts_position_in_lcd();
+    delay(500);
   }
 
   for (turnNo; turnNo < SHAFT_STEPS/2; turnNo++) {
     move_from_command(KEY_RIGHT);
     print_shafts_position_in_lcd();
+    delay(500);
   }
 
   lcd.setCursor(0, 1);
@@ -255,16 +259,19 @@ void test_mode() {
   for (turnNo = INITIAL_SHAFT_POSITION_Y; turnNo < SHAFT_STEPS; turnNo++) {
     move_from_command(KEY_UP);
     print_shafts_position_in_lcd();
+    delay(500);
   }
 
   for (turnNo; turnNo > 0; turnNo--) {
     move_from_command(KEY_DOWN);
     print_shafts_position_in_lcd();
+    delay(500);
   }
 
   for (turnNo; turnNo < SHAFT_STEPS/2; turnNo++) {
     move_from_command(KEY_UP);
     print_shafts_position_in_lcd();
+    delay(500);
   }
 
   delay(2000);
@@ -466,12 +473,12 @@ String make_request(String endpoint) {
   boolean nextIsResponse = false;
   String response = "";
 
-  while (true) {
+  //while (true) {
 
-    long elapsed_time = millis() - time;
+    //long elapsed_time = millis() - time;
 
-    if (elapsed_time >= 1 * 1000) {
-      time = millis();
+    //if (elapsed_time >= 1 * 1000) {
+      //time = millis();
       while (!client.connected()) {
         if (client.connect(serverAddress, PORT)) {
           Serial.println("Haciendo request a " + endpoint);
@@ -496,8 +503,8 @@ String make_request(String endpoint) {
       client.stop();
 
       return response;
-    }
-  }
+    //}
+  //}
 }
 
 void notify_new_photo(String endpoint, String file_name){
