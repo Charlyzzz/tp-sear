@@ -102,7 +102,7 @@ const int TEST_MODE = 1;
 const int CALIBRATION_MODE = 2;
 const int NORMAL_MODE = 4;
 
-const char TEST_KEY = '7';
+const char TEST_KEY = '#';
 const char CALIBRATION_KEY = '0';
 const char NORMAL_KEY = '*';
 const char CONFIRMAR_KEY = '5';
@@ -207,23 +207,25 @@ void test_mode() {
   lcd.print("Eje x   ");
   Serial.println("Prueba de motor eje X");
 
+  int const TEST_DELAY =  200;
+
   print_shafts_position_in_lcd();
   for (turnNo = INITIAL_SHAFT_POSITION_X; turnNo < SHAFT_STEPS; turnNo++) {
     move_from_command(KEY_RIGHT);
     print_shafts_position_in_lcd();
-    delay(500);
+    delay(TEST_DELAY);
   }
 
   for (turnNo; turnNo > 0; turnNo--) {
     move_from_command(KEY_LEFT);
     print_shafts_position_in_lcd();
-    delay(500);
+    delay(TEST_DELAY);
   }
 
   for (turnNo; turnNo < SHAFT_STEPS/2; turnNo++) {
     move_from_command(KEY_RIGHT);
     print_shafts_position_in_lcd();
-    delay(500);
+    delay(TEST_DELAY);
   }
 
   lcd.setCursor(0, 1);
@@ -234,19 +236,19 @@ void test_mode() {
   for (turnNo = INITIAL_SHAFT_POSITION_Y; turnNo < SHAFT_STEPS; turnNo++) {
     move_from_command(KEY_UP);
     print_shafts_position_in_lcd();
-    delay(500);
+    delay(TEST_DELAY);
   }
 
   for (turnNo; turnNo > 0; turnNo--) {
     move_from_command(KEY_DOWN);
     print_shafts_position_in_lcd();
-    delay(500);
+    delay(TEST_DELAY);
   }
 
   for (turnNo; turnNo < SHAFT_STEPS/2; turnNo++) {
     move_from_command(KEY_UP);
     print_shafts_position_in_lcd();
-    delay(500);
+    delay(TEST_DELAY);
   }
 
   delay(2000);
