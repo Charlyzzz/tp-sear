@@ -433,10 +433,14 @@ void move_motor() {
   digitalWrite( w3, STEP[motorStepY][2] );
   digitalWrite( w4, STEP[motorStepY][3] );
 
+  /**
+   *  Invierto la variación de izquierda y derecha para que el 
+   *  motor gire en sentido contrario
+   */
   if (turnRight) {
-    motorStepX++;
-  } else if (turnLeft) {
     motorStepX--;
+  } else if (turnLeft) {
+    motorStepX++;
   } else if (turnUp) {
     motorStepY++;
   } else if (turnDown) {
