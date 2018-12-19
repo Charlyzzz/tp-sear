@@ -1,7 +1,8 @@
 {
   "files.associations": {
     "array": "cpp",
-    "initializer_list": "cpp"
+    "initializer_list": "cpp",
+    "vector": "cpp"
   },
   "git.ignoreLimitWarning": true
 }

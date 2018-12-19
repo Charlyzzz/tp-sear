@@ -1,8 +1,5 @@
 #include <LiquidCrystal.h>
-
-#include <Key.h>
 #include <Keypad.h>
-
 #include <Ethernet.h>
 
 
@@ -26,7 +23,7 @@ int const GEAR_RATIO = 16;
 int const SHAFT_STEPS = 8;
 
 int const SHAFT_MOTOR_STEPS_RATIO = GEAR_RATIO * MOTOR_STEPS;
-int const MOTOR_TURN_DELAY = 1;
+int const MOTOR_TURN_DELAY = 2;
 
 int const INITIAL_SHAFT_POSITION_X = 4;
 int const INITIAL_SHAFT_POSITION_Y = 4;
@@ -35,10 +32,10 @@ boolean turnRight, turnLeft;
 int shaftPositionX = INITIAL_SHAFT_POSITION_X;
 int motorStepX = 0;
 
-const int m1 = 53;
-const int m2 = 51;
-const int m3 = 49;
-const int m4 = 47;
+const int m1 = 28;
+const int m2 = 26;
+const int m3 = 24;
+const int m4 = 22;
 
 boolean turnUp, turnDown;
 int shaftPositionY = INITIAL_SHAFT_POSITION_Y;
@@ -146,8 +143,8 @@ int MODE = SELECT_MODE;
 void setup() {
   setupSerial();
   setupLCD();
-  setupMotor();
   setupEthernet();
+  setupMotor();
 }
 
 void setupSerial() {
@@ -229,7 +226,7 @@ void test_mode() {
   lcd.print("Movimiento");
   
   lcd.setCursor(0, 1);
-  lcd.print("Eje x  ");
+  lcd.print("Eje x   ");
   Serial.println("Prueba de motor eje X");
 
   print_shafts_position_in_lcd();
@@ -252,7 +249,7 @@ void test_mode() {
   }
 
   lcd.setCursor(0, 1);
-  lcd.print("Eje y  ");
+  lcd.print("Eje y   ");
   Serial.println("Prueba de motor eje Y");
 
   print_shafts_position_in_lcd();
@@ -352,9 +349,9 @@ void snap_photo(){
   lcd.setCursor(0, 1);
   lcd.print("Mandar ");
   Serial.println("Sacando foto");
+  delay(2000);
   String filename = String(shaftPositionX) + "_" + String(shaftPositionY) + ".jpg";
   notify_new_photo("/api/photo", filename);
-  delay(2000);
 }
 
 void print_shafts_position_in_lcd() {
@@ -450,6 +447,7 @@ void move_motor() {
   digitalWrite( m2, STEP[motorStepX][1] );
   digitalWrite( m3, STEP[motorStepX][2] );
   digitalWrite( m4, STEP[motorStepX][3] );
+
   digitalWrite( w1, STEP[motorStepY][0] );
   digitalWrite( w2, STEP[motorStepY][1] );
   digitalWrite( w3, STEP[motorStepY][2] );
@@ -464,8 +462,8 @@ void move_motor() {
   } else if (turnDown) {
     motorStepY--;
   }
-  motorStepX = ( motorStepX + 4 ) % 4 ;
-  motorStepY = ( motorStepY + 4 ) % 4 ;
+  motorStepX = ( motorStepX + 4 ) % 4;
+  motorStepY = ( motorStepY + 4 ) % 4;
 }
 
 String make_request(String endpoint) {
