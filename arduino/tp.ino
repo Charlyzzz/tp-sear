@@ -3,7 +3,6 @@
 #include <Ethernet.h>
 
 
-
 // ==========================
 // == MOTOR CONFIG
 // ==========================s
@@ -76,29 +75,8 @@ const char KEY_RIGHT = '4';
 // ==========================
 
 
-//LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 LiquidCrystal lcd(A11, A10, A15, A14, A13, A12);
 
-//LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
-
-/*
-const int D4 = A13;
-const int D5 = A12;
-const int D6 = A11;
-const int D7 = A10;
-
-const int RS = A9;
-const int EN = A8;
-
-LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
-*/
-
-// ==========================
-// == ETHERNET CONFIG
-// ==========================
-
-// Enter a MAC address for your controller below.
-// Newer Ethernet shields have a MAC address printed on a sticker on the shield
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xE1 };
 // if you don't want to use DNS (and reduce your sketch size)
 // use the numeric IP instead of the name for the server:
@@ -471,38 +449,31 @@ String make_request(String endpoint) {
   boolean nextIsResponse = false;
   String response = "";
 
-  //while (true) {
+  while (!client.connected()) {
+    if (client.connect(serverAddress, PORT)) {
+      Serial.println("Haciendo request a " + endpoint);
+      client.println("GET " + endpoint + " HTTP/1.1");
+      client.println("Host: " + String(SERVER[0]) + "." + String(SERVER[1]) + "."  + String(SERVER[2]) + "." + String(SERVER[3]));
+      client.println("Connection:close");
+      client.println();
+    } else {
+      Serial.println("Fallo la request");
+    }
+  }
 
-    //long elapsed_time = millis() - time;
+  while (!client.available()) {}
 
-    //if (elapsed_time >= 1 * 1000) {
-      //time = millis();
-      while (!client.connected()) {
-        if (client.connect(serverAddress, PORT)) {
-          Serial.println("Haciendo request a " + endpoint);
-          client.println("GET " + endpoint + " HTTP/1.1");
-          client.println("Host: " + String(SERVER[0]) + "." + String(SERVER[1]) + "."  + String(SERVER[2]) + "." + String(SERVER[3]));
-          client.println("Connection:close");
-          client.println();
-        } else {
-          Serial.println("Fallo la request");
-        }
-      }
+  while (client.available()) {
+    char c = client.read();
+    nextIsResponse = nextIsResponse || c == '@';
+    if (nextIsResponse) {
+      response += c;
+    }
+  }
+  client.stop();
 
-      while (!client.available()) {}
+  return response;
 
-      while (client.available()) {
-        char c = client.read();
-        nextIsResponse = nextIsResponse || c == '@';
-        if (nextIsResponse) {
-          response += c;
-        }
-      }
-      client.stop();
-
-      return response;
-    //}
-  //}
 }
 
 void notify_new_photo(String endpoint, String file_name){
